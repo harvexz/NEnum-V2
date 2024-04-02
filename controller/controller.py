@@ -8,7 +8,7 @@ class Controller:
     def __init__(self):
         self.ip_address = "192.168.0.33"
         self.port = 12345
-        self.connections = {}
+        self.connections = {} # formatted as such: {(ip of client, port): socket}
 
 
         # Start a thread to run server
@@ -50,43 +50,18 @@ class Controller:
                 print(f"Connection from: {client_ip}")
 
                 self.connections[client_ip] = client_socket
+                self.example_send_command(client_ip)
                 threading.Thread(target=self.handle_client, args=(client_socket)).start() # call function to listen to return from client connection
         except Exception as error:
             print(f"Error: {error}")
 
-    def accept_connections(self, server_socket):
-        while True:
-            client_socket, client_address = server_socket.accept()
-            self.connections.append(client_address[0])  # Add client IP to the list of connections
-            # Update the GUI with the new list of connections
-            gui.update_connections(self.connections)
-            # Start a new thread to handle communication with the client
-            Thread(target=self.handle_client, args=(client_socket,)).start()
 
-    # def send_command_to_client(self, client_address: str, command: str) -> str:
-    #     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    #         s.connect((client_address, self.port))
-    #         s.sendall(command.encode())
-    #         response = s.recv(1024).decode()
-    #     return response
-    #
-    # def send_command_to_multiple_clients(self, command: str, client_addresses: List[str]) -> Dict[str, str]:
-    #     responses = {}
-    #     for address in client_addresses:
-    #         response = self.send_command_to_client(address, command)
-    #         responses[address] = response
-    #     return responses
-    #
-    # def send_different_commands_to_clients(self, command_map: Dict[str, str]) -> Dict[str, str]:
-    #     responses = {}
-    #     for address, command in command_map.items():
-    #         response = self.send_command_to_client(address, command)
-    #         responses[address] = response
-    #     return responses
-    #
-    # def get_client_info(self, client_address: str) -> Dict[str, Any]:
-    #     # Implement logic to receive configurable information about a client machine
-    #     pass
+    def example_send_command(self, client_ip):
+        client_socket = self.connections[client_ip]
+        print("a")
+        print(f"cs: {client_socket}")
+        client_socket.sendall("hello".encode())
+
 
 
 def main():

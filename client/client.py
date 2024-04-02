@@ -25,7 +25,7 @@ class Client:
 
         command = command.decode()
 
-        print(f"Actioned command {command}")
+        print(f"Actioned command: {command}")
 
 
     def get_command(self, s):
@@ -40,7 +40,7 @@ class Client:
 
             if not command: break
 
-            print(f"command received: {command.decode()}")
+            print(f"Command received: {command.decode()}")
 
             output = self.handle_command(command)
 
