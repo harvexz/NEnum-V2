@@ -1,11 +1,15 @@
-from tkinter import *
+#from tkinter import *
 import tkinter as tk
 from tkinter import ttk, MULTIPLE, END, SINGLE
+from controller import controller
 
 class MainGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Controller GUI")
+
+        #self.controller = Controller("127.0.0.1", 12345)
+        #self.controller.start()  # Start listening for incoming connections
 
         self.connections= ["192.168.1.1", "192.168.1.2", "192.168.1.3"]
 
@@ -42,10 +46,10 @@ class MainGUI:
         connections_label = tk.Label(self.tab1, text="Select a single connection to send command")
         connections_label.pack()
 
-        lb = tk.Listbox(self.tab1, selectmode=SINGLE, height=len(self.connections), width=50)
+        self.connections_listbox_tab1 = tk.Listbox(self.tab1, selectmode=SINGLE, height=len(self.connections), width=50)
         for x in self.connections:
-            lb.insert(END, x)
-        lb.pack()
+            self.connections_listbox_tab1.insert(END, x)
+        self.connections_listbox_tab1.pack()
 
 
         label = tk.Label(self.tab1, text="Enter command:")
@@ -66,10 +70,10 @@ class MainGUI:
         connections_label = tk.Label(self.tab2, text="Select multiple connections to send command")
         connections_label.pack()
 
-        lb = tk.Listbox(self.tab2, selectmode=MULTIPLE, height=len(self.connections), width=50)
+        self.connections_listbox_tab2 = tk.Listbox(self.tab2, selectmode=MULTIPLE, height=len(self.connections), width=50)
         for x in self.connections:
-            lb.insert(END, x)
-        lb.pack()
+            self.connections_listbox_tab2.insert(END, x)
+        self.connections_listbox_tab2.pack()
 
         label = tk.Label(self.tab2, text="Enter command:")
         label.pack()
@@ -131,9 +135,14 @@ class MainGUI:
 
 
     def update_connections(self, connections):
-
         self.connections = connections
-        print(connections)
+        # Update list boxes
+        self.connections_listbox_tab1.delete(0, END)
+        for ip in self.connections:
+            self.connections_listbox_tab1.insert(END, ip)
+        self.connections_listbox_tab2.delete(0, END)
+        for ip in self.connections:
+            self.connections_listbox_tab2.insert(END, ip)
 
 
     def run(self):

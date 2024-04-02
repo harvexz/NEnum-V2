@@ -5,15 +5,45 @@ class Client:
         self.ip_address = ip_address
         self.port = port
 
-    def receive_command(self, command: str) -> str:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.ip_address, self.port))
-            s.listen()
-            conn, addr = s.accept()
-            with conn:
-                print('Connected by', addr)
-                while True:
-                    data = conn.recv(1024)
-                    if not data:
-                        break
-                    conn.sendall(data.upper())  # Echo back received data in uppercase
+        self.connect()
+
+    def connect(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self.ip_address, self.port))
+        print(f"Connected to controller: {self.ip_address}:{self.port}")
+
+        self.get_command(s)
+
+
+    def handle_command(self, command):
+        """
+        Function to handle and return result from command received
+
+        :param command:
+        :return:
+        """
+
+        command = command.decode()
+
+        print(f"Actioned command {command}")
+
+
+    def get_command(self, s):
+        """
+        Function to receive command
+
+        :param s:
+        :return:
+        """
+        while True:
+            command = s.recv(4096)
+
+            if not command: break
+
+            print(f"command received: {command.decode()}")
+
+            output = self.handle_command(command)
+
+
+if __name__ == '__main__':
+    client = Client("192.168.0.33", 12345)
