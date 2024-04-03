@@ -20,6 +20,7 @@ class Controller:
         self.ip_address = "192.168.0.33"
         self.port = 12345
         self.connections = {} # formatted as such: {(ip of client, port): socket}
+        self.command_dict = {}
         self.ip_options = ["None"]
 
         self.setup_gui()
@@ -44,7 +45,7 @@ class Controller:
 
         # Grid configure
         self.root.grid_rowconfigure((0), weight=0)
-        self.root.grid_rowconfigure((2,4), weight=1, minsize=250)
+        self.root.grid_rowconfigure((5,7), weight=1, minsize=150)
 
         self.root.grid_columnconfigure((2), weight=1)
         self.root.grid_columnconfigure((1), minsize=300)
@@ -65,24 +66,45 @@ class Controller:
         self.edit_label.grid(row=1, column=1, pady=(10, 10), padx=(0, 0), sticky="nsw")
 
         self.view_option = ctk.CTkOptionMenu(self.root, values=self.ip_options, fg_color=colour2, button_color=colour4,
-                                             button_hover_color=colour3, dropdown_fg_color=colour2, dropdown_hover_color= colour4)
+                                             button_hover_color=colour3, dropdown_fg_color=colour2, dropdown_hover_color= colour4,
+                                             command=self.restore_command_selection)
         self.view_option.grid(row=1, column=1, pady=10, padx=(10, 0), sticky="nse")
 
         self.connected_list = CTkListbox(self.root, multiple_selection=False, height=500, width=250)
-        self.connected_list.grid(row=2, column=0, padx=10, pady=10, sticky="nws")
+        self.connected_list.grid(row=2, rowspan=4, column=0, padx=10, pady=10, sticky="nws")
 
         self.connection_output = ctk.CTkTextbox(self.root, fg_color=colour2)
-        self.connection_output.grid(row=2, column=2, padx=(0,10), pady=(0, 10), sticky="nswe")
+        self.connection_output.grid(row=2, rowspan=4, column=2, padx=(0,10), pady=(0, 10), sticky="nswe")
         self.connection_output.configure(state="disabled")
 
         self.checkvar = ctk.StringVar(value="off")
         self.allow_multi = ctk.CTkCheckBox(self.root, text="Alow selecton of multiple clients", variable=self.checkvar, onvalue="on",
                                            offvalue="off", fg_color=colour4, hover_color=colour3, command=self.allow_multiple)
-        self.allow_multi.grid(row=3, column=0, sticky="nswe", padx=40, pady=(0, 20))
+        self.allow_multi.grid(row=6, column=0, sticky="nswe", padx=40, pady=(0, 20))
 
         self.main_output = ctk.CTkTextbox(self.root, fg_color=colour2)
-        self.main_output.grid(row=4, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
+        self.main_output.grid(row=7, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
         self.main_output.configure(state="disabled")
+
+        self.defult_command_options()
+
+
+    def defult_command_options(self):
+
+        self.check_whoami_val = ctk.StringVar(value=False)
+        self.check_whoami = ctk.CTkCheckBox(self.root, text="Get current user", variable=self.check_whoami_val, onvalue=True,
+                                           offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
+        self.check_whoami.grid(row=2, column=1, padx=10, pady=10, sticky="w")
+
+        self.check_dir_val = ctk.StringVar(value=False)
+        self.check_dir = ctk.CTkCheckBox(self.root, text="Get current directory", variable=self.check_dir_val, onvalue=True,
+                                            offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
+        self.check_dir.grid(row=3, column=1, padx=10, pady=10, sticky="w")
+
+        self.check_pass_val = ctk.StringVar(value=False)
+        self.check_pass = ctk.CTkCheckBox(self.root, text="Get password", variable=self.check_pass_val, onvalue=True,
+                                         offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
+        self.check_pass.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
 
     def allow_multiple(self):
@@ -144,9 +166,9 @@ class Controller:
 
     def update_client_screen(self, client_ip):
 
-        self.connection_output.delete(0, tk.END) # clear output screen
+        self.connection_output.configure(state="normal")  # makes text field editable
+        self.connection_output.delete(0.0, tk.END) # clear output screen
 
-        self.connection_output.configure(state="normal") # makes text field editable
         f = open(client_ip, "r")  # open and read file
         lines = f.readlines() # read lines
         f.close()
@@ -154,6 +176,42 @@ class Controller:
         for line in lines:
             self.connection_output.insert(tk.END, line) # write lines to text field
         self.connection_output.configure(state="disabled") # make text filed un-editable
+
+
+    def defult_command_dict(self, ip):
+        print(f"defult: {ip}")
+        self.command_dict[ip] = {"check_whoami": False, "check_dir": False}
+
+
+    def restore_command_selection(self, ip_chosen):
+
+        if ip_chosen not in self.command_dict.keys():
+            self.defult_command_dict(ip_chosen)
+
+        ed = self.command_dict[ip_chosen]
+
+        if ed["check_whoami"]: self.check_whoami.select()
+        else:self.check_whoami.deselect()
+
+        if ed["check_dir"]: self.check_dir.select()
+        else:self.check_dir.deselect()
+
+        self.update_client_screen(ip_chosen)
+
+
+    def update_command_selection(self):
+        ip_chosen = self.view_option.get()
+
+        if ip_chosen not in self.command_dict.keys():
+            self.defult_command_dict(ip_chosen)
+
+        ed = self.command_dict[ip_chosen]
+
+        if self.check_whoami.get() == True: ed["check_whoami"] = True
+        else: ed["check_whoami"] = False
+
+        if self.check_dir.get() == True: ed["check_dir"] = True
+        else: ed["check_dir"] = False
 
 
     def handle_client(self, client_socket, client_ip):
