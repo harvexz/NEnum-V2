@@ -94,6 +94,7 @@ class Client:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.connect((self.ip_address, self.port))
                     self.screen_output(f"Connected to controller: {self.ip_address}:{self.port}\n")
+                    s.sendall("Recived command".encode())
                     self.connect_status(True)
                     connected = True
                 except ConnectionRefusedError:
