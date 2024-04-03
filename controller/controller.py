@@ -13,6 +13,7 @@ class Controller:
 
         # Start a thread to run server
         self.server = threading.Thread(target=self.run_server)
+        #self.server.daemon = True # thread will close when program closes, doesn't have to complete
         self.server.start()
 
 
@@ -47,7 +48,7 @@ class Controller:
             while True:
                 # wait for connection from client
                 client_socket, client_ip = server_socket.accept()
-                print(f"Connection from: {client_ip}")
+                print(f"Connection from: {client_ip[0]}:{client_ip[1]}")
 
                 self.connections[client_ip] = client_socket
                 self.example_send_command(client_ip)
@@ -60,7 +61,7 @@ class Controller:
         client_socket = self.connections[client_ip]
         print("a")
         print(f"cs: {client_socket}")
-        client_socket.sendall("hello".encode())
+        client_socket.sendall("Hello".encode())
 
 
 
