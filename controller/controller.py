@@ -20,6 +20,7 @@ class Controller:
         self.ip_address = "192.168.0.33"
         self.port = 12345
         self.connections = {} # formatted as such: {(ip of client, port): socket}
+        self.ip_options = ["None"]
 
         self.setup_gui()
         self.add_widgets()
@@ -45,7 +46,8 @@ class Controller:
         self.root.grid_rowconfigure((0), weight=0)
         self.root.grid_rowconfigure((2,4), weight=1, minsize=250)
 
-        self.root.grid_columnconfigure((0,1,2), weight=1)
+        self.root.grid_columnconfigure((2), weight=1)
+        self.root.grid_columnconfigure((1), minsize=300)
 
 
     def add_widgets(self):
@@ -58,6 +60,13 @@ class Controller:
 
         self.connected_label = ctk.CTkLabel(self.root, text="Clients Connected:")
         self.connected_label.grid(row=1, column=0, pady=(0,10) , padx=(20, 0), sticky="nws")
+
+        self.edit_label = ctk.CTkLabel(self.root, text="Manage and view:")
+        self.edit_label.grid(row=1, column=1, pady=(10, 10), padx=(0, 0), sticky="nsw")
+
+        self.view_option = ctk.CTkOptionMenu(self.root, values=self.ip_options, fg_color=colour2, button_color=colour4,
+                                             button_hover_color=colour3, dropdown_fg_color=colour2, dropdown_hover_color= colour4)
+        self.view_option.grid(row=1, column=1, pady=10, padx=(10, 0), sticky="nse")
 
         self.connected_list = CTkListbox(self.root, multiple_selection=False, height=500, width=250)
         self.connected_list.grid(row=2, column=0, padx=10, pady=10, sticky="nws")
@@ -75,16 +84,42 @@ class Controller:
         self.main_output.grid(row=4, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
         self.main_output.configure(state="disabled")
 
-        self.connected_list.insert(tk.END, 1)
-        self.connected_list.insert(tk.END, 2)
-        self.connected_list.insert(tk.END, 3)
-
 
     def allow_multiple(self):
         if self.checkvar.get() == "on":
             self.connected_list.configure(multiple_selection=True)
         elif self.checkvar.get() == "off":
             self.connected_list.configure(multiple_selection=False)
+
+
+    def update_connections(self):
+        """
+        Used to update all lists, drop downs etc to contain only current connections
+        :return:
+        """
+
+        self.update_connected_list()
+        self.update_dropdown_options()
+
+
+    def update_connected_list(self):
+
+        self.connected_list.delete(0, tk.END)  # clear list
+
+        for connection in self.connections:
+            self.connected_list.insert(tk.END, connection)
+
+
+    def update_dropdown_options(self):
+        self.ip_options = []  # reset variable for drop down
+
+        for connection in self.connections:
+            self.ip_options.append(connection[0])
+
+        if not self.ip_options: self.ip_options = ["None"] # if empty set to a none option
+
+        self.view_option.configure(values=self.ip_options) # updates drop down menu options from amended list
+        self.view_option.set(self.ip_options[0]) # selects first item in list
 
 
     def main_screen_output(self, output_message):
@@ -120,6 +155,7 @@ class Controller:
             self.connection_output.insert(tk.END, line) # write lines to text field
         self.connection_output.configure(state="disabled") # make text filed un-editable
 
+
     def handle_client(self, client_socket, client_ip):
         try:
             while True:
@@ -127,12 +163,15 @@ class Controller:
                 if response:
                     self.client_screen_output(response, client_ip)
 
+        except ConnectionResetError:
+            self.main_screen_output(f"Client: {client_ip[0]}:{client_ip[1]} disconnected")
         except Exception as e:
             output_message = f"An error occurred with {client_ip}: {e}\n"
             print(output_message)
         finally:
             client_socket.close()
             del self.connections[client_ip]
+            self.update_connections()
 
 
     def run_server(self):
@@ -159,6 +198,7 @@ class Controller:
                 f.close()
 
                 self.connections[client_ip] = client_socket
+                self.update_connections()
                 self.example_send_command(client_ip)
                 threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start() # call function to listen to return from client connection
         except Exception as error:
