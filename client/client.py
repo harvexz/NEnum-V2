@@ -1,10 +1,17 @@
+import platform
 import socket
 import threading
 import customtkinter as ctk
 import tkinter as tk
 from CTkListbox import *
-from tkinter import messagebox
+import platform
 import time
+import uuid
+try:
+    import netifaces
+except ModuleNotFoundError:
+    print("Module 'netifaces' not installed")
+
 
 # Defult Project Settings
 font = "Arial"
@@ -18,6 +25,8 @@ class Client:
     def __init__(self, ip_address: str, port: int):
         self.ip_address = ip_address
         self.port = port
+        uname = platform.uname()
+        self.os = uname.system
 
         self.setup_gui()
         self.add_widgets()
@@ -95,7 +104,7 @@ class Client:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.connect((self.ip_address, self.port))
                     self.screen_output(f"Connected to controller: {self.ip_address}:{self.port}\n")
-                    s.sendall("Recived command".encode())
+                    s.sendall("Connection acknowledged".encode())
                     self.connect_status(True)
                     connected = True
                 except ConnectionRefusedError:
@@ -105,6 +114,78 @@ class Client:
             self.get_command(s)
 
 
+    def get_users(self) -> list:
+        """
+        Function to handle get user command
+
+        Reads from /etc/shadow and will only return users with a home directory or root directory (root)
+
+        :return: -> List: users
+        """
+        users = []
+
+        try:
+            f = open("/etc/passwd", "r")
+            contents = f.readlines()
+            f.close()
+        except FileNotFoundError:
+            return ["File not found, ensure readable and on a linux system"]
+        except PermissionError:
+            return ["Error with permissions, ensure file readable"]
+
+        for line in contents:
+            if "/home" in line or "/root" in line: # used to get real users
+                line = line.split(":")
+                if line[1] != "x":
+                    usr_info = f"User: {line[0]} Password: {line[1]} GID: {line[3]} Home dir: {line[5]}"
+                else:
+                    usr_info = f"User: {line[0]} GID: {line[3]} Home dir: {line[5]} Shell: {line[6]}"
+                users.append(usr_info)
+
+        return users
+
+
+    def processor_info(self):
+        results = {}
+
+        try:
+            file = open('/proc/cpuinfo', 'r')
+            cpu_info = file.readlines()
+            file.close()
+        except FileNotFoundError:
+            return ["File not found, ensure readable and on a linux system"]
+        except PermissionError:
+            return ["Error with permissions, ensure file readable"]
+
+        results = {"Vendor" : cpu_info[1].split(":")[1], "Model" : cpu_info[4].split(":")[1], "MHz" :cpu_info[7].split(":")[1], "Cache size" : cpu_info[8].split(":")[1]}
+
+        return results
+
+
+    def network_info(self):
+        results = {}
+
+        if self.os == "Linux":
+            try:
+                interfaces = netifaces.interfaces()
+                results["Network interfaces"] = ", ".join(interfaces)
+                for x in range(len(interfaces)):
+                    address_for = f"\nMacAddress for {interfaces[x]}"
+                    results[address_for] = ''.join((netifaces.ifaddresses(interfaces[x])[netifaces.AF_LINK][0]["addr"]))
+                print(results)
+                results[interfaces[-1]] = ''.join((results[f"\nMacAddress for {interfaces[-1]}"], "\n"))
+            except NameError:
+                self.screen_output("Module 'netifaces' not found")
+                return {"Error": "Module not installed on client"}
+
+        elif self.os == "Windows":
+            macaddr = hex(uuid.getnode())[2:]
+            print(macaddr)
+            results["MacAddress"] = ':'.join(macaddr[i:i + 2] for i in range(0, len(macaddr), 2))
+
+        return results
+
+
     def handle_command(self, command: bytes, s: socket.socket):
         """
         Function to handle and return result from command received
@@ -112,12 +193,30 @@ class Client:
         :param command:
         :return:
         """
+        response = [] # initialising variable
 
         command = command.decode()
 
+        if command == "usrs":
+            s.sendall("\nReturn for: Get Users ->\n".encode())
+            response = self.get_users()
+        elif command == "processor":
+            s.sendall("\nReturn for: Processor Information ->\n".encode())
+            response = self.processor_info()
+        elif command == "netinfo":
+            s.sendall("\nReturn for: Network Information ->\n".encode())
+            response = self.network_info()
+
+        # return the results of command
+        if response:
+            if type(response) is list:
+                for value in response:
+                    s.sendall(value.encode())
+            elif type(response) is dict:
+                for value in response:
+                    s.sendall(f"{value}: {response[value]}".encode())
+
         output_message = f"Actioned command: {command}"
-        s.sendall(f"Return from command: {command}\n"
-                  f"\t simulated retur".encode())
         self.screen_output(output_message)
 
 
@@ -140,7 +239,7 @@ class Client:
             output_message = f"Command received: {command.decode()}"
             self.screen_output(output_message)
 
-            output = self.handle_command(command, s)
+            self.handle_command(command, s)
 
         self.screen_output("\n!! Disconnected from controller !!\n")
         self.connect_status(False)

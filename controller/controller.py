@@ -3,7 +3,6 @@ import threading
 import customtkinter as ctk
 import tkinter as tk
 from CTkListbox import *
-from threading import Thread
 import time
 
 # Defult Project Settings
@@ -14,12 +13,12 @@ colour2 = "#31363F"
 colour3 = "#810CA8"
 colour4 = "#C147E9"
 
+
 class Controller:
-    #def __init__(self, ip_address, port: int):
     def __init__(self):
         self.ip_address = "192.168.0.33"
         self.port = 12345
-        self.connections = {} # formatted as such: {(ip of client, port): socket}
+        self.connections = {}  # formatted as such: {(ip of client, port): socket}
         self.command_dict = {}
         self.ip_options = ["None"]
 
@@ -41,14 +40,13 @@ class Controller:
         # GUI setup
         self.root = ctk.CTk()
         self.root.title("Client")
-        self.root.geometry(f"{900}x{700}")
+        self.root.geometry(f"{1050}x{700}")
 
         # Grid configure
-        self.root.grid_rowconfigure((0), weight=0)
         self.root.grid_rowconfigure((5,7), weight=1, minsize=150)
 
-        self.root.grid_columnconfigure((2), weight=1)
-        self.root.grid_columnconfigure((1), minsize=300)
+        self.root.grid_columnconfigure(2, weight=1)
+        self.root.grid_columnconfigure(1, minsize=300)
 
 
     def add_widgets(self):
@@ -69,6 +67,9 @@ class Controller:
                                              button_hover_color=colour3, dropdown_fg_color=colour2, dropdown_hover_color= colour4,
                                              command=self.restore_command_selection)
         self.view_option.grid(row=1, column=1, pady=10, padx=(10, 0), sticky="nse")
+
+        self.clear_button = ctk.CTkButton(self.root, text="Clear output", fg_color=colour4, hover_color=colour3, command=self.clear_client_screen)
+        self.clear_button.grid(row=1, column=2, sticky="nswe", padx=10, pady=(0, 20))
 
         self.connected_list = CTkListbox(self.root, multiple_selection=False, height=500, width=250)
         self.connected_list.grid(row=2, rowspan=4, column=0, padx=10, pady=10, sticky="nws")
@@ -94,20 +95,21 @@ class Controller:
 
     def defult_command_options(self):
 
-        self.check_whoami_val = ctk.StringVar(value=False)
-        self.check_whoami = ctk.CTkCheckBox(self.root, text="Get current user", variable=self.check_whoami_val, onvalue=True,
+        self.check_netinfo_val = ctk.StringVar(value=False)
+        self.check_netinfo = ctk.CTkCheckBox(self.root, text="Get network information", variable=self.check_netinfo_val, onvalue=True,
                                            offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
-        self.check_whoami.grid(row=2, column=1, padx=10, pady=10, sticky="w")
+        self.check_netinfo.grid(row=2, column=1, padx=10, pady=10, sticky="w")
 
-        self.check_dir_val = ctk.StringVar(value=False)
-        self.check_dir = ctk.CTkCheckBox(self.root, text="Get current directory", variable=self.check_dir_val, onvalue=True,
-                                            offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
-        self.check_dir.grid(row=3, column=1, padx=10, pady=10, sticky="w")
+        self.check_processor_val = ctk.StringVar(value=False)
+        self.check_processor = ctk.CTkCheckBox(self.root, text="Get Processor Info", variable=self.check_processor_val,onvalue=True,
+                                               offvalue=False, fg_color=colour4, hover_color=colour3,command=self.update_command_selection)
+        self.check_processor.grid(row=3, column=1, padx=10, pady=10, sticky="w")
 
-        self.check_pass_val = ctk.StringVar(value=False)
-        self.check_pass = ctk.CTkCheckBox(self.root, text="Get password", variable=self.check_pass_val, onvalue=True,
+        self.check_usrs_val = ctk.StringVar(value=False)
+        self.check_usrs = ctk.CTkCheckBox(self.root, text="Get Users", variable=self.check_usrs_val, onvalue=True,
                                          offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
-        self.check_pass.grid(row=4, column=1, padx=10, pady=10, sticky="w")
+        self.check_usrs.grid(row=4, column=1, padx=10, pady=10, sticky="w")
+
 
 
     def allow_multiple(self):
@@ -157,6 +159,17 @@ class Controller:
         self.main_output.see(tk.END)  # auto scroll to bottom
 
 
+    def clear_client_screen(self):
+
+        ip_chosen = self.view_option.get()
+
+        f = open(ip_chosen, "w")
+        f.write("Output cleared")
+        f.close()
+
+        self.update_client_screen(ip_chosen)
+
+
     def client_screen_output(self, output_message, client_ip):
 
         # ensuring displaying is neat
@@ -177,19 +190,23 @@ class Controller:
         self.connection_output.configure(state="normal")  # makes text field editable
         self.connection_output.delete(0.0, tk.END) # clear output screen
 
-        f = open(client_ip, "r")  # open and read file
-        lines = f.readlines() # read lines
-        f.close()
+        try:
+            f = open(client_ip, "r")  # open and read file
+            lines = f.readlines() # read lines
+            f.close()
 
-        for line in lines:
-            self.connection_output.insert(tk.END, line) # write lines to text field
-        self.connection_output.configure(state="disabled") # make text filed un-editable
-        self.connection_output.see(tk.END) # auto scroll to bottom
+            for line in lines:
+                self.connection_output.insert(tk.END, line)  # write lines to text field
+            self.connection_output.configure(state="disabled")  # make text filed un-editable
+            self.connection_output.see(tk.END)  # auto scroll to bottom
+
+        except FileNotFoundError:
+            self.main_screen_output("Error: File not found for command restoration")
 
 
     def defult_command_dict(self, ip):
         print(f"defult: {ip}")
-        self.command_dict[ip] = {"check_whoami": False, "check_dir": False}
+        self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False,}
 
 
     def restore_command_selection(self, ip_chosen):
@@ -199,11 +216,14 @@ class Controller:
 
         ed = self.command_dict[ip_chosen]
 
-        if ed["check_whoami"]: self.check_whoami.select()
-        else:self.check_whoami.deselect()
+        if ed["check_netinfo"]: self.check_netinfo.select()
+        else:self.check_netinfo.deselect()
 
-        if ed["check_dir"]: self.check_dir.select()
-        else:self.check_dir.deselect()
+        if ed["processor"]:self.check_processor.select()
+        else:self.check_processor.deselect()
+
+        if ed["usrs"]:self.check_usrs.select()
+        else:self.check_usrs.deselect()
 
         self.update_client_screen(ip_chosen)
 
@@ -216,11 +236,14 @@ class Controller:
 
         ed = self.command_dict[ip_chosen]
 
-        if self.check_whoami.get() == True: ed["check_whoami"] = True
-        else: ed["check_whoami"] = False
+        if self.check_netinfo.get() == True: ed["check_netinfo"] = True
+        else: ed["check_netinfo"] = False
 
-        if self.check_dir.get() == True: ed["check_dir"] = True
-        else: ed["check_dir"] = False
+        if self.check_processor.get() == True: ed["processor"] = True
+        else: ed["processor"] = False
+
+        if self.check_usrs.get() == True: ed["usrs"] = True
+        else: ed["usrs"] = False
 
 
     def handle_client(self, client_socket, client_ip):
@@ -266,15 +289,9 @@ class Controller:
 
                 self.connections[client_ip] = client_socket
                 self.update_connections()
-                self.example_send_command(client_ip)
                 threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start() # call function to listen to return from client connection
         except Exception as error:
             self.main_screen_output(f"Error: {error}")
-
-
-    def example_send_command(self, client_ip):
-        client_socket = self.connections[client_ip]
-        client_socket.sendall("Hello".encode())
 
 
     def send_commands(self):
@@ -287,21 +304,31 @@ class Controller:
                 final_clients.append(x)
         elif type(selected_clients) is tuple:
             final_clients.append(selected_clients)
+        elif selected_clients == None:
+            self.main_screen_output("No clients selected from left pane")
 
         for client in final_clients:
-            print(client[0])
             if client[0] in self.command_dict.keys():
-                if self.command_dict[client[0]]["check_whoami"]:
+
+                if all(value == False for value in self.command_dict[client[0]].values()):
+                    self.main_screen_output(f"No commands selected for {client[0]}")
+                else:
+                    self.main_screen_output(f"Sending commands to {client[0]}")
+
+                if self.command_dict[client[0]]["check_netinfo"]:
                     client_socket = self.connections[client]
-                    client_socket.sendall("whoami".encode())
+                    client_socket.sendall("netinfo".encode())
                     time.sleep(0.5)
 
-                if self.command_dict[client[0]]["check_dir"]:
+                if self.command_dict[client[0]]["processor"]:
                     client_socket = self.connections[client]
-                    client_socket.sendall("dir".encode())
-                    time.sleep(0.5)
+                    client_socket.sendall("processor".encode())
+                    time.sleep(0.1)
 
-
+                if self.command_dict[client[0]]["usrs"]:
+                    client_socket = self.connections[client]
+                    client_socket.sendall("usrs".encode())
+                    time.sleep(0.1)
 
 
 def main():
