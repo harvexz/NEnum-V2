@@ -82,6 +82,9 @@ class Controller:
                                            offvalue="off", fg_color=colour4, hover_color=colour3, command=self.allow_multiple)
         self.allow_multi.grid(row=6, column=0, sticky="nswe", padx=40, pady=(0, 20))
 
+        self.send_button = ctk.CTkButton(self.root, text="Send all commands", fg_color=colour4, hover_color=colour3, command=self.send_commands)
+        self.send_button.grid(row=6, column=2, sticky="nswe", padx=10, pady=(0,20))
+
         self.main_output = ctk.CTkTextbox(self.root, fg_color=colour2)
         self.main_output.grid(row=7, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
         self.main_output.configure(state="disabled")
@@ -151,11 +154,16 @@ class Controller:
         self.main_output.configure(state="normal")
         self.main_output.insert(tk.END, output_message + "\n") # Display to GUI
         self.main_output.configure(state="disabled")
+        self.main_output.see(tk.END)  # auto scroll to bottom
 
 
     def client_screen_output(self, output_message, client_ip):
 
-        print(output_message) # Display to terminal
+        # ensuring displaying is neat
+        if not output_message[-1] == "\n":
+            output_message = ''.join((output_message, "\n"))
+
+        print(output_message)  # Display to terminal
 
         f = open(client_ip[0], "a")
         f.write(output_message)
@@ -176,6 +184,7 @@ class Controller:
         for line in lines:
             self.connection_output.insert(tk.END, line) # write lines to text field
         self.connection_output.configure(state="disabled") # make text filed un-editable
+        self.connection_output.see(tk.END) # auto scroll to bottom
 
 
     def defult_command_dict(self, ip):
@@ -266,6 +275,32 @@ class Controller:
     def example_send_command(self, client_ip):
         client_socket = self.connections[client_ip]
         client_socket.sendall("Hello".encode())
+
+
+    def send_commands(self):
+        final_clients = []
+
+        selected_clients = self.connected_list.get()
+
+        if type(selected_clients) is list:
+            for x in selected_clients:
+                final_clients.append(x)
+        elif type(selected_clients) is tuple:
+            final_clients.append(selected_clients)
+
+        for client in final_clients:
+            print(client[0])
+            if client[0] in self.command_dict.keys():
+                if self.command_dict[client[0]]["check_whoami"]:
+                    client_socket = self.connections[client]
+                    client_socket.sendall("whoami".encode())
+                    time.sleep(0.5)
+
+                if self.command_dict[client[0]]["check_dir"]:
+                    client_socket = self.connections[client]
+                    client_socket.sendall("dir".encode())
+                    time.sleep(0.5)
+
 
 
 

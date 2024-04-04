@@ -75,6 +75,7 @@ class Client:
         self.textbox.configure(state="normal")
         self.textbox.insert(tk.END, output_message + "\n") # Display to GUI
         self.textbox.configure(state="disabled")
+        self.textbox.see(tk.END)  # auto scroll to bottom
 
 
     def connect_status(self, connected: bool):
@@ -104,7 +105,7 @@ class Client:
             self.get_command(s)
 
 
-    def handle_command(self, command: bytes):
+    def handle_command(self, command: bytes, s: socket.socket):
         """
         Function to handle and return result from command received
 
@@ -115,6 +116,8 @@ class Client:
         command = command.decode()
 
         output_message = f"Actioned command: {command}"
+        s.sendall(f"Return from command: {command}\n"
+                  f"\t simulated retur".encode())
         self.screen_output(output_message)
 
 
@@ -137,7 +140,7 @@ class Client:
             output_message = f"Command received: {command.decode()}"
             self.screen_output(output_message)
 
-            output = self.handle_command(command)
+            output = self.handle_command(command, s)
 
         self.screen_output("\n!! Disconnected from controller !!\n")
         self.connect_status(False)
