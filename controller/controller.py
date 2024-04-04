@@ -13,22 +13,29 @@ colour2 = "#31363F"
 colour3 = "#810CA8"
 colour4 = "#C147E9"
 
-
-class Controller:
+class Controller_GUI:
     def __init__(self):
-        self.ip_address = "192.168.0.33"
-        self.port = 12345
-        self.connections = {}  # formatted as such: {(ip of client, port): socket}
-        self.command_dict = {}
-        self.ip_options = ["None"]
-
+        self.controller = Controller()
         self.setup_gui()
         self.add_widgets()
+        self.copy_connections = {}
 
         # Start a thread to run server
-        self.server = threading.Thread(target=self.run_server)
-        self.server.daemon = True # thread will close when program closes, doesn't have to complete
+        self.server = threading.Thread(target=self.controller.run_server)
+        self.server.daemon = True  # thread will close when program closes, doesn't have to complete
         self.server.start()
+
+        self.gui_loop = threading.Thread(target=self.main)
+        self.gui_loop.daemon = True  # thread will close when program closes, doesn't have to complete
+        self.gui_loop.start()
+
+
+    def main(self):
+        while True:
+            time.sleep(0.5)
+            self.update_connections()
+            self.check_main_screen_output()
+            self.check_client_screen_output()
 
 
     def setup_gui(self):
@@ -63,7 +70,7 @@ class Controller:
         self.edit_label = ctk.CTkLabel(self.root, text="Manage and view:")
         self.edit_label.grid(row=1, column=1, pady=(10, 10), padx=(0, 0), sticky="nsw")
 
-        self.view_option = ctk.CTkOptionMenu(self.root, values=self.ip_options, fg_color=colour2, button_color=colour4,
+        self.view_option = ctk.CTkOptionMenu(self.root, values=self.controller.ip_options, fg_color=colour2, button_color=colour4,
                                              button_hover_color=colour3, dropdown_fg_color=colour2, dropdown_hover_color= colour4,
                                              command=self.restore_command_selection)
         self.view_option.grid(row=1, column=1, pady=10, padx=(10, 0), sticky="nse")
@@ -83,7 +90,7 @@ class Controller:
                                            offvalue="off", fg_color=colour4, hover_color=colour3, command=self.allow_multiple)
         self.allow_multi.grid(row=6, column=0, sticky="nswe", padx=40, pady=(0, 20))
 
-        self.send_button = ctk.CTkButton(self.root, text="Send all commands", fg_color=colour4, hover_color=colour3, command=self.send_commands)
+        self.send_button = ctk.CTkButton(self.root, text="Send all commands", fg_color=colour4, hover_color=colour3, command=self.call_send_commands)
         self.send_button.grid(row=6, column=2, sticky="nswe", padx=10, pady=(0,20))
 
         self.main_output = ctk.CTkTextbox(self.root, fg_color=colour2)
@@ -136,26 +143,33 @@ class Controller:
 
 
     def update_connected_list(self):
+        print("orig", self.controller.connections)
+        print("copy", self.copy_connections)
 
-        self.connected_list.delete(0, tk.END)  # clear list
+        if self.copy_connections != self.controller.connections:
 
-        for connection in self.connections:
-            self.connected_list.insert(tk.END, connection)
+            self.connected_list.delete(0, tk.END)  # clear list
+
+            for connection in self.controller.connections:
+                self.connected_list.insert(tk.END, connection)
+
+            self.copy_connections = self.controller.connections
+            print("copy", self.copy_connections)
 
 
     def update_dropdown_options(self):
-        self.ip_options = []  # reset variable for drop down
+        self.controller.ip_options = []  # reset variable for drop down
 
-        for connection in self.connections:
-            self.ip_options.append(connection[0])
+        for c in self.controller.connections:
+            self.controller.ip_options.append(c[0])
 
-        if connection[0] not in self.command_dict.keys():
-            self.defult_command_dict(connection[0])
+            if c[0] not in self.controller.command_dict.keys():
+                self.controller.defult_command_dict(c[0])
 
-        if not self.ip_options: self.ip_options = ["None"] # if empty set to a none option
+        if not self.controller.ip_options: self.controller.ip_options = ["None"]  # if empty set to a none option
 
-        self.view_option.configure(values=self.ip_options) # updates drop down menu options from amended list
-        self.view_option.set(self.ip_options[0]) # selects first item in list
+        self.view_option.configure(values=self.controller.ip_options)  # updates drop down menu options from amended list
+        self.view_option.set(self.controller.ip_options[0])  # selects first item in list
 
 
     def main_screen_output(self, output_message):
@@ -213,17 +227,12 @@ class Controller:
             self.main_screen_output("Error: File not found for command restoration")
 
 
-    def defult_command_dict(self, ip):
-        self.main_screen_output(f"Defults set: {ip}")
-        self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False,}
-
-
     def restore_command_selection(self, ip_chosen):
 
-        if ip_chosen not in self.command_dict.keys():
-            self.defult_command_dict(ip_chosen)
+        if ip_chosen not in self.controller.command_dict.keys():
+            self.controller.defult_command_dict(ip_chosen)
 
-        ed = self.command_dict[ip_chosen]
+        ed = self.controller.command_dict[ip_chosen]
 
         if ed["check_netinfo"]: self.check_netinfo.select()
         else:self.check_netinfo.deselect()
@@ -240,10 +249,10 @@ class Controller:
     def update_command_selection(self):
         ip_chosen = self.view_option.get()
 
-        if ip_chosen not in self.command_dict.keys():
-            self.defult_command_dict(ip_chosen)
+        if ip_chosen not in self.controller.command_dict.keys():
+            self.controller.defult_command_dict(ip_chosen)
 
-        ed = self.command_dict[ip_chosen]
+        ed = self.controller.command_dict[ip_chosen]
 
         if self.check_netinfo.get() == True: ed["check_netinfo"] = True
         else: ed["check_netinfo"] = False
@@ -255,15 +264,47 @@ class Controller:
         else: ed["usrs"] = False
 
 
+    def call_send_commands(self):
+        self.controller.send_commands(self.connected_list.get())
+
+
+    def check_main_screen_output(self):
+        if self.controller.main_screen_output:
+            self.main_screen_output(self.controller.main_screen_output)
+            self.controller.main_screen_output = ""
+
+
+    def check_client_screen_output(self):
+        if self.controller.client_screen_output:
+            self.client_screen_output(self.controller.client_screen_output[0], self.controller.client_screen_output[1])
+            self.controller.client_screen_output = ""
+
+
+
+class Controller:
+    def __init__(self):
+        self.ip_address = "192.168.0.33"
+        self.port = 12345
+        self.connections = {}  # formatted as such: {(ip of client, port): socket}
+        self.command_dict = {}
+        self.ip_options = ["None"]
+        self.client_screen_output = ""
+
+
+    def defult_command_dict(self, ip):
+        self.main_screen_output = f"Defults set: {ip}"
+        self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False,}
+
+
     def handle_client(self, client_socket, client_ip):
         try:
             while True:
                 response = client_socket.recv(4096).decode()
                 if response:
-                    self.client_screen_output(response, client_ip)
+                    self.client_screen_output = [response, client_ip]
 
         except ConnectionResetError:
-            self.main_screen_output(f"Client: {client_ip[0]}:{client_ip[1]} disconnected")
+            self.main_screen_output = f"Client: {client_ip[0]}:{client_ip[1]} disconnected"
         except Exception as e:
             output_message = f"An error occurred with {client_ip}: {e}\n"
             print(output_message)
@@ -284,12 +325,12 @@ class Controller:
             self.main_server_socket.bind((self.ip_address, self.port))
             self.main_server_socket.listen()
 
-            self.main_screen_output("Listening for connections")
+            self.main_screen_output = "Listening for connections"
 
             while True:
                 # wait for connection from client
                 client_socket, client_ip = self.main_server_socket.accept()
-                self.main_screen_output(f"Connection from: {client_ip[0]}:{client_ip[1]}")
+                self.main_screen_output = f"Connection from: {client_ip[0]}:{client_ip[1]}"
 
                 # Create/clear output file
                 f = open(client_ip[0], "w")
@@ -297,16 +338,15 @@ class Controller:
                 f.close()
 
                 self.connections[client_ip] = client_socket
-                self.update_connections()
                 threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start() # call function to listen to return from client connection
         except Exception as error:
-            self.main_screen_output(f"Error: {error}")
+            self.main_screen_output = f"Error: {error}"
 
 
-    def send_commands(self):
+    def send_commands(self, connected_list):
         final_clients = []
 
-        selected_clients = self.connected_list.get()
+        selected_clients = connected_list
 
         if type(selected_clients) is list:
             for x in selected_clients:
@@ -314,15 +354,15 @@ class Controller:
         elif type(selected_clients) is tuple:
             final_clients.append(selected_clients)
         elif selected_clients == None:
-            self.main_screen_output("No clients selected from left pane")
+            self.main_screen_output = "No clients selected from left pane"
 
         for client in final_clients:
             if client[0] in self.command_dict.keys():
 
                 if all(value == False for value in self.command_dict[client[0]].values()):
-                    self.main_screen_output(f"No commands selected for {client[0]}")
+                    self.main_screen_output = f"No commands selected for {client[0]}"
                 else:
-                    self.main_screen_output(f"Sending commands to {client[0]}")
+                    self.main_screen_output = f"Sending commands to {client[0]}"
 
                 if self.command_dict[client[0]]["check_netinfo"]:
                     client_socket = self.connections[client]
@@ -341,8 +381,8 @@ class Controller:
 
 
 def main():
-    controller = Controller()
-    controller.root.mainloop()
+    gui = Controller_GUI()
+    gui.root.mainloop()
 
 
 if __name__ == '__main__':
