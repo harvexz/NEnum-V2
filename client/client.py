@@ -24,7 +24,7 @@ colour4 = "#C147E9"
 class Client:
     def __init__(self, ip_address: str, port: int):
         self.ip_address = ip_address
-        self.port = port
+        self.port = [port, 5001, 5002] #  backup ports will also be tested if given fails
         uname = platform.uname()
         self.os = uname.system
 
@@ -100,14 +100,18 @@ class Client:
             connected = False
 
             while not connected:
-                try:
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.connect((self.ip_address, self.port))
-                    self.screen_output(f"Connected to controller: {self.ip_address}:{self.port}\n")
-                    s.sendall("Connection acknowledged".encode())
-                    self.connect_status(True)
-                    connected = True
-                except ConnectionRefusedError:
+                for p in self.port:
+                    try:
+                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s.connect((self.ip_address, p))
+                        self.screen_output(f"Connected to controller: {self.ip_address}:{p}\n")
+                        s.sendall("Connection acknowledged".encode())
+                        self.connect_status(True)
+                        self.port = p
+                        connected = True
+                    except ConnectionRefusedError:
+                        pass
+                if not connected:
                     self.screen_output("Connection failed: Ensure controller running - Waiting...")
                     time.sleep(4)
 

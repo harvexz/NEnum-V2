@@ -27,7 +27,7 @@ class Controller:
 
         # Start a thread to run server
         self.server = threading.Thread(target=self.run_server)
-        #self.server.daemon = True # thread will close when program closes, doesn't have to complete
+        self.server.daemon = True # thread will close when program closes, doesn't have to complete
         self.server.start()
 
 
@@ -69,7 +69,7 @@ class Controller:
         self.view_option.grid(row=1, column=1, pady=10, padx=(10, 0), sticky="nse")
 
         self.clear_button = ctk.CTkButton(self.root, text="Clear output", fg_color=colour4, hover_color=colour3, command=self.clear_client_screen)
-        self.clear_button.grid(row=1, column=2, sticky="nswe", padx=10, pady=(0, 20))
+        self.clear_button.grid(row=1, column=2, sticky="nswe", padx=10, pady=10)
 
         self.connected_list = CTkListbox(self.root, multiple_selection=False, height=500, width=250)
         self.connected_list.grid(row=2, rowspan=4, column=0, padx=10, pady=10, sticky="nws")
@@ -89,6 +89,8 @@ class Controller:
         self.main_output = ctk.CTkTextbox(self.root, fg_color=colour2)
         self.main_output.grid(row=7, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
         self.main_output.configure(state="disabled")
+
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.defult_command_options()
 
@@ -110,6 +112,10 @@ class Controller:
                                          offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
         self.check_usrs.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
+
+    def on_close(self):
+        self.root.destroy()
+        self.root.quit()
 
 
     def allow_multiple(self):
@@ -142,6 +148,9 @@ class Controller:
 
         for connection in self.connections:
             self.ip_options.append(connection[0])
+
+        if connection[0] not in self.command_dict.keys():
+            self.defult_command_dict(connection[0])
 
         if not self.ip_options: self.ip_options = ["None"] # if empty set to a none option
 
@@ -205,7 +214,7 @@ class Controller:
 
 
     def defult_command_dict(self, ip):
-        print(f"defult: {ip}")
+        self.main_screen_output(f"Defults set: {ip}")
         self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False,}
 
 
@@ -269,29 +278,34 @@ class Controller:
         Start the server, listen for incomming connection, and create new thread for each connection
         :return:
         """
+        connected = False
 
-        try:
-            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_socket.bind((self.ip_address, self.port))
-            server_socket.listen()
+        while not connected:
+            try:
+                self.port = 12345
+                self.main_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.main_server_socket.bind((self.ip_address, self.port))
+                self.main_server_socket.listen()
 
-            self.main_screen_output("Listening for connections")
+                self.main_screen_output("Listening for connections")
 
-            while True:
-                # wait for connection from client
-                client_socket, client_ip = server_socket.accept()
-                self.main_screen_output(f"Connection from: {client_ip[0]}:{client_ip[1]}")
+                while True:
+                    # wait for connection from client
+                    client_socket, client_ip = self.main_server_socket.accept()
+                    self.main_screen_output(f"Connection from: {client_ip[0]}:{client_ip[1]}")
 
-                # Create/clear output file
-                f = open(client_ip[0], "w")
-                f.write("")
-                f.close()
+                    # Create/clear output file
+                    f = open(client_ip[0], "w")
+                    f.write("")
+                    f.close()
 
-                self.connections[client_ip] = client_socket
-                self.update_connections()
-                threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start() # call function to listen to return from client connection
-        except Exception as error:
-            self.main_screen_output(f"Error: {error}")
+                    self.connections[client_ip] = client_socket
+                    self.update_connections()
+                    threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start() # call function to listen to return from client connection
+                    connected = True
+            except Exception as error:
+                self.port = 5001
+                self.main_screen_output(f"Error: {error}, using port: {self.port}")
 
 
     def send_commands(self):
