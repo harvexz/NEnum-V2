@@ -10,6 +10,7 @@ This project implements a network controller and client system in Python, allowi
    * [Features](#features)
       + [Basic Functionality](#basic-functionality)
       + [Advanced Functionality](#advanced-functionality)
+      + [Commands](#commands)
    * [Usage](#usage)
       + [Controller](#controller)
       + [Client](#client)
@@ -45,6 +46,14 @@ The system consists of two main components:
     * Options to gather various system information from clients (e.g. network information, processor information, user accounts)
 * Client:
     * Allows configuration of controller IP address
+
+### Commands
+
+* Get network information (Linux + Windows)
+* Get Processor information (Linux)
+* Get Users (Linux)
+* Get Sudoers (Linux - sudo permissions)
+* Get Running Processes (Linux + Windows)
     
 ## Usage
 
