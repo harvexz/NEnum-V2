@@ -16,6 +16,12 @@ colour4 = "#C147E9"
 
 class Controller:
     def __init__(self):
+        """
+        Initialisation for controller class
+
+        Class contains GUI for controller and functionality to connect to clients
+        :return:
+        """
         self.ip_address = "192.168.0.33"
         self.port = 12345
         self.connections = {}  # formatted as such: {(ip of client, port): socket}
@@ -43,7 +49,7 @@ class Controller:
         self.root.geometry(f"{1050}x{700}")
 
         # Grid configure
-        self.root.grid_rowconfigure((5,7), weight=1, minsize=150)
+        self.root.grid_rowconfigure((7,9), weight=1, minsize=150)
 
         self.root.grid_columnconfigure(2, weight=1)
         self.root.grid_columnconfigure(1, minsize=300)
@@ -52,6 +58,7 @@ class Controller:
     def add_widgets(self):
         """
         Function to add widgits to GUI window
+
         :return:
         """
         self.title = ctk.CTkLabel(self.root, text="Controller Pannel", font=(font, 20))
@@ -61,7 +68,7 @@ class Controller:
         self.connected_label.grid(row=1, column=0, pady=(0,10) , padx=(20, 0), sticky="nws")
 
         self.refresh_button = ctk.CTkButton(self.root, text="Force Refresh", fg_color=colour4, hover_color=colour3, command=self.refresh_connections)
-        self.refresh_button.grid(row=1, column=0, sticky="nse", padx=10, pady=(0,10))
+        self.refresh_button.grid(row=1, column=0, sticky="nse", padx=10, pady=(5,15))
 
         self.edit_label = ctk.CTkLabel(self.root, text="Manage and view:")
         self.edit_label.grid(row=1, column=1, pady=(10, 10), padx=(0, 0), sticky="nsw")
@@ -75,22 +82,22 @@ class Controller:
         self.clear_button.grid(row=1, column=2, sticky="nswe", padx=10, pady=10)
 
         self.connected_list = CTkListbox(self.root, multiple_selection=False, height=500, width=250)
-        self.connected_list.grid(row=2, rowspan=4, column=0, padx=10, pady=10, sticky="nws")
+        self.connected_list.grid(row=2, rowspan=6, column=0, padx=10, pady=10, sticky="nws")
 
         self.connection_output = ctk.CTkTextbox(self.root, fg_color=colour2)
-        self.connection_output.grid(row=2, rowspan=4, column=2, padx=(0,10), pady=(0, 10), sticky="nswe")
+        self.connection_output.grid(row=2, rowspan=6, column=2, padx=(0,10), pady=(0, 10), sticky="nswe")
         self.connection_output.configure(state="disabled")
 
         self.checkvar = ctk.StringVar(value="off")
         self.allow_multi = ctk.CTkCheckBox(self.root, text="Alow selecton of multiple clients", variable=self.checkvar, onvalue="on",
                                            offvalue="off", fg_color=colour4, hover_color=colour3, command=self.allow_multiple)
-        self.allow_multi.grid(row=6, column=0, sticky="nswe", padx=40, pady=(0, 20))
+        self.allow_multi.grid(row=8, column=0, sticky="nswe", padx=40, pady=(0, 20))
 
         self.send_button = ctk.CTkButton(self.root, text="Send all commands", fg_color=colour4, hover_color=colour3, command=self.send_commands)
-        self.send_button.grid(row=6, column=2, sticky="nswe", padx=10, pady=(0,20))
+        self.send_button.grid(row=8, column=2, sticky="nswe", padx=10, pady=(0,20))
 
         self.main_output = ctk.CTkTextbox(self.root, fg_color=colour2)
-        self.main_output.grid(row=7, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
+        self.main_output.grid(row=9, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nswe")
         self.main_output.configure(state="disabled")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -115,6 +122,19 @@ class Controller:
                                          offvalue=False, fg_color=colour4, hover_color=colour3, command=self.update_command_selection)
         self.check_usrs.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
+        self.check_sudoers_val = ctk.StringVar(value=False)
+        self.check_sudoers = ctk.CTkCheckBox(self.root, text="Get Sudoers", variable=self.check_sudoers_val,
+                                          onvalue=True,
+                                          offvalue=False, fg_color=colour4, hover_color=colour3,
+                                          command=self.update_command_selection)
+        self.check_sudoers.grid(row=5, column=1, padx=10, pady=10, sticky="w")
+
+        self.check_proc_val = ctk.StringVar(value=False)
+        self.check_proc = ctk.CTkCheckBox(self.root, text="Get Running Processes", variable=self.check_proc_val, onvalue=True,
+                                          offvalue=False, fg_color=colour4, hover_color=colour3,
+                                          command=self.update_command_selection)
+        self.check_proc.grid(row=6, column=1, padx=10, pady=10, sticky="w")
+
 
     def on_close(self):
         self.root.destroy()
@@ -122,6 +142,11 @@ class Controller:
 
 
     def allow_multiple(self):
+        """
+        Enables or disables multiple selection in the connected client list based on checkbox state
+
+        :return:
+        """
         if self.checkvar.get() == "on":
             self.connected_list.configure(multiple_selection=True)
         elif self.checkvar.get() == "off":
@@ -131,6 +156,7 @@ class Controller:
     def update_connections(self):
         """
         Used to update all lists, drop downs etc to contain only current connections
+
         :return:
         """
 
@@ -139,6 +165,11 @@ class Controller:
 
 
     def update_connected_list(self):
+        """
+        Updates the selection list of connected clients
+
+        :return:
+        """
 
         self.connected_list.delete(0, tk.END)  # clear list
 
@@ -147,6 +178,11 @@ class Controller:
 
 
     def update_dropdown_options(self):
+        """
+        Updates the drop down list of connected clients
+
+        :return:
+        """
         self.ip_options = []  # reset variable for drop down
 
         for connection in self.connections:
@@ -164,7 +200,13 @@ class Controller:
         self.view_option.set(self.ip_options[0]) # selects first item in list
 
 
-    def main_screen_output(self, output_message):
+    def main_screen_output(self, output_message: str):
+        """
+        Displays information both to terminal window and to main screen in GUI
+
+        :param output_message: str
+        :return:
+        """
 
         print(output_message) # Display to terminal
 
@@ -175,6 +217,12 @@ class Controller:
 
 
     def clear_client_screen(self):
+        """
+        Clears output file for the given client, then refreshes the client screen to reflect this
+        Clears the screen for client
+
+        :return:
+        """
 
         ip_chosen = self.view_option.get()
 
@@ -185,7 +233,14 @@ class Controller:
         self.update_client_screen(ip_chosen)
 
 
-    def client_screen_output(self, output_message, client_ip):
+    def client_screen_output(self, output_message: str, client_ip: tuple):
+        """
+        Displays information both to terminal window and to client screen in GUI
+
+        :param output_message: str
+        :param client_ip: tuple
+        :return:
+        """
 
         # ensuring displaying is neat
         if not output_message[-1] == "\n":
@@ -200,7 +255,14 @@ class Controller:
         self.update_client_screen(client_ip[0])
 
 
-    def update_client_screen(self, client_ip):
+    def update_client_screen(self, client_ip: str):
+        """
+        Updates the information on the client screen to match that in the respective "log" file
+        Updates to show output accuratly
+
+        :param client_ip: str
+        :return:
+        """
 
         self.connection_output.configure(state="normal")  # makes text field editable
         self.connection_output.delete(0.0, tk.END) # clear output screen
@@ -220,6 +282,12 @@ class Controller:
 
 
     def refresh_connections(self):
+        """
+        Checks that connections are still active
+        If disconnected will remove from lists and deselect them if they were selected
+
+        :return:
+        """
         self.main_screen_output("Refreshing connections")
         try:
             for c in self.connections.values():
@@ -236,49 +304,89 @@ class Controller:
 
 
 
-    def defult_command_dict(self, ip):
-        self.main_screen_output(f"Defults set: {ip}")
-        self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False,}
+    def defult_command_dict(self, ip: str):
+        """
+        Sets dictionary of commands to defult values of "False"
+        This is to ensure selections are correct when client first connects etc.
+
+        :param ip: str
+        :return:
+        """
+        if ip != "None":
+            self.main_screen_output(f"Defults set: {ip}")
+            self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False, "sudoers": False, "proc": False}
 
 
-    def restore_command_selection(self, ip_chosen):
+    def restore_command_selection(self, ip_chosen: str):
+        """
+        When new client from drop down menu it will restore the view of their selected commands to send
 
-        if ip_chosen not in self.command_dict.keys():
-            self.defult_command_dict(ip_chosen)
+        :param ip_chosen: str
+        :return:
+        """
+        if ip_chosen != "None":
+            if ip_chosen not in self.command_dict.keys():
+                self.defult_command_dict(ip_chosen)
 
-        ed = self.command_dict[ip_chosen]
+            ed = self.command_dict[ip_chosen]
 
-        if ed["check_netinfo"]: self.check_netinfo.select()
-        else:self.check_netinfo.deselect()
+            if ed["check_netinfo"]: self.check_netinfo.select()
+            else:self.check_netinfo.deselect()
 
-        if ed["processor"]:self.check_processor.select()
-        else:self.check_processor.deselect()
+            if ed["processor"]:self.check_processor.select()
+            else:self.check_processor.deselect()
 
-        if ed["usrs"]:self.check_usrs.select()
-        else:self.check_usrs.deselect()
+            if ed["usrs"]:self.check_usrs.select()
+            else:self.check_usrs.deselect()
 
-        self.update_client_screen(ip_chosen)
+            if ed["sudoers"]:self.check_sudoers.select()
+            else:self.check_sudoers.deselect()
+
+            if ed["proc"]:self.check_proc.select()
+            else:self.check_proc.deselect()
+
+            self.update_client_screen(ip_chosen)
 
 
     def update_command_selection(self):
+        """
+        When client selected from drop down menu and command selected is changed, it will updated the dictionary
+
+        :return:
+        """
         ip_chosen = self.view_option.get()
 
-        if ip_chosen not in self.command_dict.keys():
-            self.defult_command_dict(ip_chosen)
+        if ip_chosen != "None":
+            if ip_chosen not in self.command_dict.keys():
+                self.defult_command_dict(ip_chosen)
 
-        ed = self.command_dict[ip_chosen]
+            ed = self.command_dict[ip_chosen]
 
-        if self.check_netinfo.get() == True: ed["check_netinfo"] = True
-        else: ed["check_netinfo"] = False
+            if self.check_netinfo.get() == True: ed["check_netinfo"] = True
+            else: ed["check_netinfo"] = False
 
-        if self.check_processor.get() == True: ed["processor"] = True
-        else: ed["processor"] = False
+            if self.check_processor.get() == True: ed["processor"] = True
+            else: ed["processor"] = False
 
-        if self.check_usrs.get() == True: ed["usrs"] = True
-        else: ed["usrs"] = False
+            if self.check_usrs.get() == True: ed["usrs"] = True
+            else: ed["usrs"] = False
+
+            if self.check_sudoers.get() == True: ed["sudoers"] = True
+            else: ed["sudoers"] = False
+
+            if self.check_proc.get() == True: ed["proc"] = True
+            else: ed["proc"] = False
 
 
-    def handle_client(self, client_socket, client_ip):
+    def handle_client(self, client_socket: socket.socket, client_ip: tuple):
+        """
+        Manages the client connection and waits for response
+        If there is an error or client is disconnected it will delete them from connection list
+
+        :param client_socket:
+        :param client_ip:
+        :return:
+        """
         try:
             while True:
                 response = client_socket.recv(4096).decode()
@@ -298,7 +406,8 @@ class Controller:
 
     def run_server(self):
         """
-        Start the server, listen for incomming connection, and create new thread for each connection
+        Start the server, listen for incoming connection, and create new thread for each connection
+
         :return:
         """
 
@@ -327,6 +436,12 @@ class Controller:
 
 
     def send_commands(self):
+        """
+        Manages sending commands to the client/clients
+        Will check what clients selected and send relevant commands for each, from the command dictionary
+
+        :return:
+        """
         final_clients = []
 
         selected_clients = self.connected_list.get()
@@ -362,8 +477,23 @@ class Controller:
                     client_socket.sendall("usrs".encode())
                     time.sleep(0.1)
 
+                if self.command_dict[client[0]]["sudoers"]:
+                    client_socket = self.connections[client]
+                    client_socket.sendall("sudoers".encode())
+                    time.sleep(0.1)
+
+                if self.command_dict[client[0]]["proc"]:
+                    client_socket = self.connections[client]
+                    client_socket.sendall("proc".encode())
+                    time.sleep(0.1)
+
 
 def main():
+    """
+    Main function to initialise and start class/GUI
+
+    :return:
+    """
     controller = Controller()
     controller.root.mainloop()
 

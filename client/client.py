@@ -7,6 +7,7 @@ from CTkListbox import *
 import platform
 import time
 import uuid
+import psutil
 try:
     import netifaces
 except ModuleNotFoundError:
@@ -159,7 +160,7 @@ class Client:
         return True
 
 
-    def screen_output(self, output_message):
+    def screen_output(self, output_message: str):
         try:
             output_message = output_message.decode()
         except (UnicodeDecodeError, AttributeError):
@@ -235,7 +236,7 @@ class Client:
         return users
 
 
-    def processor_info(self):
+    def processor_info(self) -> dict:
         results = {}
 
         try:
@@ -252,7 +253,7 @@ class Client:
         return results
 
 
-    def network_info(self):
+    def network_info(self) -> dict:
         results = {}
 
         if self.os == "Linux":
@@ -276,6 +277,66 @@ class Client:
         return results
 
 
+    def get_running_processes(self) -> list:
+        """
+        Gets currently running processes on the client's computer
+        Uses psutil library
+
+        :return results: list
+        """
+        results = []
+
+        try:
+            # for all running processes
+            for process in psutil.process_iter(['pid', 'name', 'status']):
+                process_info = process.info
+                if process_info['status'] == "running":
+                    process_final = f"PID: {process_info['pid']} --- Name: {process_info['name']}\n"
+                    results.append(process_final)
+            if not results:
+                results.append("No running processes: All processes idle/sleeping")
+        except Exception as e:
+            self.screen_output(f"An error occurred getting running processes: {e}")
+
+        return results
+
+
+    def get_sudoers(self):
+        """
+        Gets the list of users who have sudo privileges
+        Reads /etc/sudoers file.
+
+        :return results: list - contains usernames of users with sudo privileges.
+        """
+        sudoers = []
+
+        if self.os == "Linux":
+            try:
+                with open("/etc/sudoers", "r") as file:
+                    for line in file:
+                        # ignore comments, new lines and other unwanted information
+                        if line.startswith("#") or line.startswith('\n') or line.startswith("Defaults") or line.startswith("@"):
+                            continue
+                        parts = line.split()
+                        sudoers.append(line)
+            except FileNotFoundError:
+                error_msg = "Error: /etc/sudoers file not found."
+                self.screen_output(error_msg)
+                return [error_msg]
+            except PermissionError:
+                error_msg = "Permissions of client application not high enough!\n" \
+                            "Ensure running with escalated privileges"
+                self.screen_output(error_msg)
+                return [error_msg]
+            except Exception as e:
+                self.screen_output("An error occurred:", e)
+                return ["An error occured"]
+        else:
+            return["Error: This command only works on Linux"]
+
+        return sudoers
+
+
     def handle_command(self, command: bytes, s: socket.socket):
         """
         Function to handle and return result from command received
@@ -296,6 +357,12 @@ class Client:
         elif command == "netinfo":
             s.sendall("\nReturn for: Network Information ->\n".encode())
             response = self.network_info()
+        elif command == "sudoers":
+            s.sendall("\nReturn for: Get Sudoers ->\n".encode())
+            response = self.get_sudoers()
+        elif command == "proc":
+            s.sendall("\nReturn for: Running Processes ->\n".encode())
+            response = self.get_running_processes()
 
         # return the results of command
         if response:
