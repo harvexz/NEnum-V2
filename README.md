@@ -45,13 +45,8 @@ The system consists of two main components:
     * Allows configuration of controller IP address
     
 ## Usage
-The user is able to run either the main.py file, which will give them will give them A Commandline option to choose whether to run the controller or client program.
 
-```
-$ python3 main.py
-```
-
-They however are also able to run each directly.
+The user should decide what program they would like to run and complete the following for their choice:
 
 ### Controller
 Running the following will start the controller program and will bring up the GUI
