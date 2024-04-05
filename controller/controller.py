@@ -20,18 +20,19 @@ class Controller:
         Initialisation for controller class
 
         Class contains GUI for controller and functionality to connect to clients
+        (Schimansky, 2022)
         :return:
         """
-        self.ip_address = "192.168.0.33"
-        self.port = 12345
+        self.ip_address = "192.168.0.33"  # setting self ip to listen on
+        self.port = 12345  # setting port to listen on
         self.connections = {}  # formatted as such: {(ip of client, port): socket}
-        self.command_dict = {}
-        self.ip_options = ["None"]
+        self.command_dict = {}  # contains list of connections with their commands
+        self.ip_options = ["None"]  # used for dropdown menu
 
         self.setup_gui()
         self.add_widgets()
 
-        # Start a thread to run server
+        # start thread to run server
         self.server = threading.Thread(target=self.run_server)
         self.server.daemon = True # thread will close when program closes, doesn't have to complete
         self.server.start()
@@ -40,6 +41,7 @@ class Controller:
     def setup_gui(self):
         """
         Function to simply setup the GUI window and set default settings
+        (Schimansky, 2022)
 
         :return:
         """
@@ -57,7 +59,8 @@ class Controller:
 
     def add_widgets(self):
         """
-        Function to add widgits to GUI window
+        Function to add widgets to GUI window
+        (Schimansky, 2022)
 
         :return:
         """
@@ -106,6 +109,12 @@ class Controller:
 
 
     def defult_command_options(self):
+        """
+        Function to add command option check boxes to the first collumn
+        (Schimansky, 2022)
+
+        :return:
+        """
 
         self.check_netinfo_val = ctk.StringVar(value=False)
         self.check_netinfo = ctk.CTkCheckBox(self.root, text="Get network information", variable=self.check_netinfo_val, onvalue=True,
@@ -137,6 +146,11 @@ class Controller:
 
 
     def on_close(self):
+        """
+        Function to manage closing the program
+
+        :return:
+        """
         self.root.destroy()
         self.root.quit()
 
@@ -148,9 +162,9 @@ class Controller:
         :return:
         """
         if self.checkvar.get() == "on":
-            self.connected_list.configure(multiple_selection=True)
+            self.connected_list.configure(multiple_selection=True)  # allow selecting multiple clients
         elif self.checkvar.get() == "off":
-            self.connected_list.configure(multiple_selection=False)
+            self.connected_list.configure(multiple_selection=False)  # disallow selecting multiple clients
 
 
     def update_connections(self):
@@ -173,6 +187,7 @@ class Controller:
 
         self.connected_list.delete(0, tk.END)  # clear list
 
+        # for each connection add to end of listbox
         for connection in self.connections:
             self.connected_list.insert(tk.END, connection)
 
@@ -185,13 +200,15 @@ class Controller:
         """
         self.ip_options = []  # reset variable for drop down
 
+        # for each connection add to drop down menu
         for connection in self.connections:
             self.ip_options.append(connection[0])
 
         try:
+            # sets defult command options if client does not have any set yet
             if connection[0] not in self.command_dict.keys():
                 self.defult_command_dict(connection[0])
-        except UnboundLocalError:
+        except UnboundLocalError:  # ignores error caused by user trying to load "None"
             pass
 
         if not self.ip_options: self.ip_options = ["None"] # if empty set to a none option
@@ -210,9 +227,9 @@ class Controller:
 
         print(output_message) # Display to terminal
 
-        self.main_output.configure(state="normal")
+        self.main_output.configure(state="normal")  # make text section editable
         self.main_output.insert(tk.END, output_message + "\n") # Display to GUI
-        self.main_output.configure(state="disabled")
+        self.main_output.configure(state="disabled")  # make text section non-editable
         self.main_output.see(tk.END)  # auto scroll to bottom
 
 
@@ -226,11 +243,12 @@ class Controller:
 
         ip_chosen = self.view_option.get()
 
+        # overwrite file with "Output cleared"
         f = open(ip_chosen, "w")
         f.write("Output cleared")
         f.close()
 
-        self.update_client_screen(ip_chosen)
+        self.update_client_screen(ip_chosen)  # call to update the screen to reflect change
 
 
     def client_screen_output(self, output_message: str, client_ip: tuple):
@@ -290,16 +308,18 @@ class Controller:
         """
         self.main_screen_output("Refreshing connections")
         try:
+            # attempt to send message to client, if it fails will trigger update and show as disconnected
             for c in self.connections.values():
                 c.sendall("Controller checking connection".encode())
         except Exception as e:
             self.main_screen_output(f"Error refreshing connections: {e}")
 
         try:
+            # deselects all selected clients from listbox
             num_of_selected = len(self.connected_list.get())
             for x in range(0, num_of_selected - 1):
                 self.connected_list.deactivate(x)
-        except TypeError:
+        except TypeError: # caused if no clients selected so can be passed
             pass
 
 
@@ -314,6 +334,7 @@ class Controller:
         """
         if ip != "None":
             self.main_screen_output(f"Defults set: {ip}")
+            # defult dictionary values
             self.command_dict[ip] = {"check_netinfo": False, "processor": False, "usrs": False, "sudoers": False, "proc": False}
 
 
@@ -324,12 +345,14 @@ class Controller:
         :param ip_chosen: str
         :return:
         """
+        # set default if no command dictionary set for this client
         if ip_chosen != "None":
             if ip_chosen not in self.command_dict.keys():
                 self.defult_command_dict(ip_chosen)
 
             ed = self.command_dict[ip_chosen]
 
+            # check each command value in dictionary and action check box accordingly
             if ed["check_netinfo"]: self.check_netinfo.select()
             else:self.check_netinfo.deselect()
 
@@ -356,12 +379,14 @@ class Controller:
         """
         ip_chosen = self.view_option.get()
 
+        # set default if no command dictionary set for this client
         if ip_chosen != "None":
             if ip_chosen not in self.command_dict.keys():
                 self.defult_command_dict(ip_chosen)
 
             ed = self.command_dict[ip_chosen]
 
+            # check each check box and update the dictionary for client command accordingly
             if self.check_netinfo.get() == True: ed["check_netinfo"] = True
             else: ed["check_netinfo"] = False
 
@@ -382,36 +407,43 @@ class Controller:
         """
         Manages the client connection and waits for response
         If there is an error or client is disconnected it will delete them from connection list
+        (Rosenfield, 2019)
+        (Real Python, 2018)
 
         :param client_socket:
         :param client_ip:
         :return:
         """
         try:
-            while True:
+            while True:  # continuosly waits for response
                 response = client_socket.recv(4096).decode()
                 if response:
+                    # output response to client screen using method
                     self.client_screen_output(response, client_ip)
 
-        except ConnectionResetError:
+        except ConnectionResetError:  # caused by client disconecting
             self.main_screen_output(f"Client: {client_ip[0]}:{client_ip[1]} disconnected")
         except Exception as e:
             output_message = f"An error occurred with {client_ip}: {e}\n"
             print(output_message)
-        finally:
+        finally:  # clean up socket, dict of connections etc
             client_socket.close()
             del self.connections[client_ip]
+            del self.command_dict[client_ip[0]]
             self.update_connections()
 
 
     def run_server(self):
         """
         Start the server, listen for incoming connection, and create new thread for each connection
+        (Real Python, 2018)
 
         :return:
         """
 
+        # attempt to run the server
         try:
+            # initialise server and listen
             self.main_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.main_server_socket.bind((self.ip_address, self.port))
             self.main_server_socket.listen()
@@ -423,14 +455,15 @@ class Controller:
                 client_socket, client_ip = self.main_server_socket.accept()
                 self.main_screen_output(f"Connection from: {client_ip[0]}:{client_ip[1]}")
 
-                # Create/clear output file
+                # create/clear output file
                 f = open(client_ip[0], "w")
                 f.write("")
                 f.close()
 
-                self.connections[client_ip] = client_socket
-                self.update_connections()
-                threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start() # call function to listen to return from client connection
+                self.connections[client_ip] = client_socket  # add client socket to connections dict
+                self.update_connections()  # trigger update
+                # thread calling function to listen to return from client connection
+                threading.Thread(target=self.handle_client, args=(client_socket, client_ip)).start()
         except Exception as error:
             self.main_screen_output(f"Error: {error}")
 
@@ -444,28 +477,31 @@ class Controller:
         """
         final_clients = []
 
-        selected_clients = self.connected_list.get()
+        selected_clients = self.connected_list.get()  # gets clients selected in list box
 
-        if type(selected_clients) is list:
+        if type(selected_clients) is list:  # if it is a list type many are selected
             for x in selected_clients:
                 final_clients.append(x)
-        elif type(selected_clients) is tuple:
+        elif type(selected_clients) is tuple:  # if it is tuple one selected
             final_clients.append(selected_clients)
         elif selected_clients == None:
             self.main_screen_output("No clients selected from left pane")
 
         for client in final_clients:
+            # if client has command dictionary set
             if client[0] in self.command_dict.keys():
 
+                # if all values are false throw alert to tell user to select
                 if all(value == False for value in self.command_dict[client[0]].values()):
                     self.main_screen_output(f"No commands selected for {client[0]}")
                 else:
                     self.main_screen_output(f"Sending commands to {client[0]}")
 
+                # check if each command selected (True)
                 if self.command_dict[client[0]]["check_netinfo"]:
                     client_socket = self.connections[client]
-                    client_socket.sendall("netinfo".encode())
-                    time.sleep(0.5)
+                    client_socket.sendall("netinfo".encode())  # send command
+                    time.sleep(0.5)  # sleep to avoid messaged being connected
 
                 if self.command_dict[client[0]]["processor"]:
                     client_socket = self.connections[client]
@@ -500,3 +536,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+"""
+Referances
+Real Python. (2018, August). Socket Programming in Python (Guide). Realpython.com; Real Python. https://realpython.com/python-sockets/
+Rosenfield, A. (2019, October 17). Python Socket Receive Large Amount of Data. Stack Overflow. https://stackoverflow.com/questions/17667903/python-socket-receive-large-amount-of-data
+Schimansky, T. (2022, July 29). CustomTkinter UI-Library. GitHub. https://github.com/TomSchimansky/CustomTkinter
+Tech With Tim. (2020, April 5). Python Socket Programming Tutorial. Www.youtube.com. https://www.youtube.com/watch?v=3QiPPX-KeSc
+"""

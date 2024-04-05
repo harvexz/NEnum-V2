@@ -86,3 +86,13 @@ $ python3 client.py
 5. Run Controller or Client as described in [usage](#usage) section
 
 
+## Referances
+
+- Real Python. (2018, August). Socket Programming in Python (Guide). Realpython.com; Real Python. https://realpython.com/python-sockets/
+- Rosenfield, A. (2019, October 17). Python Socket Receive Large Amount of Data. Stack Overflow. https://stackoverflow.com/questions/17667903/python-socket-receive-large-amount-of-data
+- Schafer, C. (2017, August 16). Python Tutorial: Unit Testing Your Code with the unittest Module. Www.youtube.com. https://www.youtube.com/watch?v=6tNS--WetLI
+- Schimansky, T. (2022, July 29). CustomTkinter UI-Library. GitHub. https://github.com/TomSchimansky/CustomTkinter
+- Tech With Tim. (2020, April 5). Python Socket Programming Tutorial. Www.youtube.com. https://www.youtube.com/watch?v=3QiPPX-KeSc
+
+
+
