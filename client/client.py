@@ -27,6 +27,7 @@ class Client:
         self.port = port
         uname = platform.uname()
         self.os = uname.system
+        self.keep_running = True
 
         self.setup_gui()
         self.add_widgets()
@@ -69,8 +70,93 @@ class Client:
         self.textbox.grid(row=2, column=0, columnspan=1, padx=20, pady=(0, 20), sticky="nswe")
         self.textbox.configure(state="disabled")
 
-        self.settings_button = ctk.CTkButton(self.root, text="Settings", fg_color=colour4, hover_color=colour3)
+        self.settings_button = ctk.CTkButton(self.root, text="Settings", fg_color=colour4, hover_color=colour3, command=self.add_settings_ui)
         self.settings_button.grid(row=3, column=0, sticky="nswe", padx=40, pady=(0, 20))
+
+    def add_settings_ui(self):
+        # Create a new window for settings
+        self.settings_window = ctk.CTk()
+        self.settings_window.title("Settings")
+        self.settings_window.geometry("300x200")
+
+        # Add labels and input fields for IP address and port
+        self.ip_label = ctk.CTkLabel(self.settings_window, text="IP Address:")
+        self.ip_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.ip_entry = ctk.CTkEntry(self.settings_window)
+        self.ip_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        self.port_label = ctk.CTkLabel(self.settings_window, text="Port:")
+        self.port_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+        self.port_entry = ctk.CTkEntry(self.settings_window)
+        self.port_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        # Add save button
+        self.save_button = ctk.CTkButton(self.settings_window, text="Save", command=self.save_settings)
+        self.save_button.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+
+        self.disconnect = True
+
+
+    def save_settings(self):
+        # Get IP address and port from input fields
+        self.keep_running = False
+
+        new_ip = self.ip_entry.get()
+        try:
+            new_port = int(self.port_entry.get())
+        except ValueError:
+            self.screen_output("Ensure port is valid integer")
+
+        # Update IP address and port
+        if not self.connected_to_controller:
+            if self.check_valid_ip(new_ip):
+                self.ip_address = new_ip
+                if self.check_valid_port(new_port):
+                    self.port = new_port
+
+                    self.screen_output(f"Controller settings updated\nNew IP: {new_ip}\nNew port: {new_port}")
+
+                    self.settings_window.destroy()  # close settings window
+
+                    time.sleep(0.5)
+
+                    self.keep_running = True
+
+                    self.connect_thread = threading.Thread(target=self.connect)
+                    self.connect_thread.daemon = True
+                    self.connect_thread.start()
+                else:
+                    self.screen_output("Port not valid")
+            else:
+                self.screen_output(f"IP address not valid")
+        else:
+            self.screen_output(f"Cannot change configuration, currently connected")
+
+
+
+    def check_valid_ip(self, ip: str) -> bool:
+        parts = ip.split('.')
+        if len(parts) != 4:
+            return False
+        for part in parts:
+            if not part.isdigit():
+                return False
+            if not 0 <= int(part) <= 255:
+                return False
+        return True
+
+
+    def check_valid_port(self, port: int) -> bool:
+        reserved_ports = [0, 20, 21, 22, 23, 25, 53, 67, 68, 69, 80, 110, 123, 137, 138, 139, 143, 161, 162, 179, 389,
+                          443, 445, 464, 512, 513, 514, 636, 993, 995, 1080]  # common reserved ports
+
+        if not 0 < port < 65536:  # port must be in the range [1, 65535]
+            return False
+
+        if port in reserved_ports:  # port is reserved
+            return False
+
+        return True
 
 
     def screen_output(self, output_message):
@@ -92,12 +178,14 @@ class Client:
             self.indicator.configure(text="Connected", text_color="green")
         else:
             self.indicator.configure(text="Disconnected", text_color="red")
+        self.connected_to_controller = connected
 
 
     def connect(self):
 
-        while True:
+        while self.keep_running:
             connected = False
+            self.screen_output("Initial connection attemp: If hanging -> ip address not valid device")
 
             while not connected:
                 try:
@@ -110,6 +198,8 @@ class Client:
                 except ConnectionRefusedError:
                     self.screen_output("Connection failed: Ensure controller running - Waiting...")
                     time.sleep(4)
+                except Exception as e:
+                    print(e)
 
             self.get_command(s)
 

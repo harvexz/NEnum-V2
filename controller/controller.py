@@ -60,6 +60,9 @@ class Controller:
         self.connected_label = ctk.CTkLabel(self.root, text="Clients Connected:")
         self.connected_label.grid(row=1, column=0, pady=(0,10) , padx=(20, 0), sticky="nws")
 
+        self.refresh_button = ctk.CTkButton(self.root, text="Force Refresh", fg_color=colour4, hover_color=colour3, command=self.refresh_connections)
+        self.refresh_button.grid(row=1, column=0, sticky="nse", padx=10, pady=(0,10))
+
         self.edit_label = ctk.CTkLabel(self.root, text="Manage and view:")
         self.edit_label.grid(row=1, column=1, pady=(10, 10), padx=(0, 0), sticky="nsw")
 
@@ -149,8 +152,11 @@ class Controller:
         for connection in self.connections:
             self.ip_options.append(connection[0])
 
-        if connection[0] not in self.command_dict.keys():
-            self.defult_command_dict(connection[0])
+        try:
+            if connection[0] not in self.command_dict.keys():
+                self.defult_command_dict(connection[0])
+        except UnboundLocalError:
+            pass
 
         if not self.ip_options: self.ip_options = ["None"] # if empty set to a none option
 
@@ -211,6 +217,23 @@ class Controller:
 
         except FileNotFoundError:
             self.main_screen_output("Error: File not found for command restoration")
+
+
+    def refresh_connections(self):
+        self.main_screen_output("Refreshing connections")
+        try:
+            for c in self.connections.values():
+                c.sendall("Controller checking connection".encode())
+        except Exception as e:
+            self.main_screen_output(f"Error refreshing connections: {e}")
+
+        try:
+            num_of_selected = len(self.connected_list.get())
+            for x in range(0, num_of_selected - 1):
+                self.connected_list.deactivate(x)
+        except TypeError:
+            pass
+
 
 
     def defult_command_dict(self, ip):
